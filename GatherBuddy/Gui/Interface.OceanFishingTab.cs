@@ -68,6 +68,37 @@ public partial class Interface
             ImGui.Separator();
         }
 
+        // EmbarkController controls (PR 4).
+        var embark = GatherBuddy.EmbarkController;
+        if (embark != null)
+        {
+            var embEnabled = embark.Enabled;
+            if (ImGui.Checkbox("Enable AutoEmbark (path to ferry NPC + interact)", ref embEnabled))
+                embark.Enabled = embEnabled;
+
+            ImGui.TextUnformatted($"Embark state : {embark.State}");
+            if (!string.IsNullOrEmpty(embark.LastError))
+                ImGui.TextColored(new System.Numerics.Vector4(1f, 0.5f, 0.4f, 1f), $"Last error: {embark.LastError}");
+
+            var pos = embark.FerryStandPosition;
+            if (ImGui.InputFloat3("Ferry stand position", ref pos))
+                embark.FerryStandPosition = pos;
+
+            var npcId = (int)embark.FerrySkipperDataId;
+            if (ImGui.InputInt("Ferry Skipper data id", ref npcId))
+                embark.FerrySkipperDataId = (uint)System.Math.Max(0, npcId);
+
+            var territory = (int)embark.FerryTerritoryId;
+            if (ImGui.InputInt("Ferry territory id", ref territory))
+                embark.FerryTerritoryId = (ushort)System.Math.Clamp(territory, 0, ushort.MaxValue);
+
+            var sel = embark.SelectStringBoardIndex;
+            if (ImGui.InputInt("SelectString board index", ref sel))
+                embark.SelectStringBoardIndex = System.Math.Max(0, sel);
+
+            ImGui.Separator();
+        }
+
         // Show the next ocean route per area, regardless of territory, as a debug helper.
         var now = GatherBuddy.Time.ServerTime;
         try

@@ -5,7 +5,7 @@ namespace GatherBuddy.Plugin;
 
 public sealed class GatherBuddyIpc : IDisposable
 {
-    public const int IpcVersion = 2;
+    public const int IpcVersion = 3;
 
     private readonly GatherBuddy _plugin;
 
@@ -48,6 +48,39 @@ public sealed class GatherBuddyIpc : IDisposable
 
     [EzIPCEvent]
     public Action<bool> AutoGatherEnabledChanged;
+
+    // --- Ocean fishing (added in IpcVersion 3) ---
+
+    [EzIPC]
+    public byte GetCurrentOceanRouteId()
+        => GatherBuddy.AutoOceanFishing?.CurrentRoute?.Id ?? (byte)0;
+
+    [EzIPC]
+    public string GetCurrentOceanRouteName()
+        => GatherBuddy.AutoOceanFishing?.CurrentRoute?.Name ?? string.Empty;
+
+    [EzIPC]
+    public int GetCurrentOceanSegment()
+        => GatherBuddy.AutoOceanFishing?.CurrentSegment ?? -1;
+
+    [EzIPC]
+    public bool IsSpectralActive()
+        => GatherBuddy.SpectralDetector?.IsSpectralActive ?? false;
+
+    [EzIPC]
+    public bool IsAutoOceanEnabled()
+        => GatherBuddy.AutoOceanFishing?.Enabled ?? false;
+
+    [EzIPC]
+    public void SetAutoOceanEnabled(bool enabled)
+    {
+        if (GatherBuddy.AutoOceanFishing != null)
+            GatherBuddy.AutoOceanFishing.Enabled = enabled;
+    }
+
+    [EzIPC]
+    public string GetEmbarkState()
+        => GatherBuddy.EmbarkController?.State.ToString() ?? "Unknown";
 
 #pragma warning restore CA1822 // Mark members as static
 
