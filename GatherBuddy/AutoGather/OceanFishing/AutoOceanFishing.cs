@@ -24,6 +24,13 @@ public sealed class AutoOceanFishing : IDisposable
     public bool        CurrentSpectral { get; private set; } = false;
     public string?     LastAppliedPreset { get; private set; }
 
+    // PR 7c — auto-toggle AutoHook on the boat so the player doesn't have to enable it manually.
+    // We save the prior state on trip enter and restore it on trip exit so we don't surprise the
+    // user when they leave.
+    public bool ManageAutoHookState { get; set; } = true;
+    private bool? _savedPluginState;
+    private bool? _savedAutoStart;
+
     private readonly SpectralDetector _spectral;
     private readonly OceanPresetCache _presets;
     private readonly FishingParser    _parser;
@@ -65,6 +72,7 @@ public sealed class AutoOceanFishing : IDisposable
             GatherBuddy.Log.Information(
                 $"[AutoOcean] Entered trip — route '{CurrentRoute.Name}', starting segment 0, spectral={CurrentSpectral}.");
             Apply();
+            EnableAutoHook();
         }
         catch (Exception e)
         {
@@ -80,6 +88,64 @@ public sealed class AutoOceanFishing : IDisposable
         CurrentSegment    = -1;
         CurrentSpectral   = false;
         LastAppliedPreset = null;
+        RestoreAutoHook();
+    }
+
+    private void EnableAutoHook()
+    {
+        if (!ManageAutoHookState)
+            return;
+        if (!AutoHook.Enabled)
+        {
+            GatherBuddy.Log.Warning("[AutoOcean] AutoHook plugin not available; cannot auto-enable.");
+            return;
+        }
+
+        try
+        {
+            _savedPluginState = AutoHook.GetPluginState?.Invoke();
+            _savedAutoStart   = AutoHook.GetAutoStartFishing?.Invoke();
+
+            AutoHook.SetPluginState?.Invoke(true);
+            AutoHook.SetAutoStartFishing?.Invoke(true);
+            GatherBuddy.Log.Information(
+                $"[AutoOcean] AutoHook enabled (saved prior plugin={_savedPluginState}, autoStart={_savedAutoStart}).");
+        }
+        catch (Exception e)
+        {
+            GatherBuddy.Log.Error($"[AutoOcean] Failed to toggle AutoHook on: {e}");
+        }
+    }
+
+    private void RestoreAutoHook()
+    {
+        if (!ManageAutoHookState)
+            return;
+        if (_savedPluginState is null && _savedAutoStart is null)
+            return;
+        if (!AutoHook.Enabled)
+        {
+            _savedPluginState = null;
+            _savedAutoStart   = null;
+            return;
+        }
+
+        try
+        {
+            if (_savedPluginState.HasValue) AutoHook.SetPluginState?.Invoke(_savedPluginState.Value);
+            if (_savedAutoStart.HasValue)   AutoHook.SetAutoStartFishing?.Invoke(_savedAutoStart.Value);
+            GatherBuddy.Log.Information(
+                $"[AutoOcean] AutoHook restored (plugin={_savedPluginState}, autoStart={_savedAutoStart}).");
+        }
+        catch (Exception e)
+        {
+            GatherBuddy.Log.Error($"[AutoOcean] Failed to restore AutoHook: {e}");
+        }
+        finally
+        {
+            _savedPluginState = null;
+            _savedAutoStart   = null;
+        }
     }
 
     private void OnSpectralChanged(bool spectral)

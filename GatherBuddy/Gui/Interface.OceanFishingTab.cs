@@ -66,6 +66,10 @@ public partial class Interface
             ImGui.TextUnformatted($"Current route   : {auto.CurrentRoute?.Name ?? "<none>"}");
             ImGui.TextUnformatted($"Current segment : {auto.CurrentSegment} (spectral={auto.CurrentSpectral})");
             ImGui.TextUnformatted($"Last applied    : {auto.LastAppliedPreset ?? "<none>"}");
+
+            var manage = auto.ManageAutoHookState;
+            if (ImGui.Checkbox("Auto-toggle AutoHook on/off with the trip", ref manage))
+                auto.ManageAutoHookState = manage;
             ImGui.Separator();
         }
 
