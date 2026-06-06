@@ -88,9 +88,9 @@ public partial class Interface
             if (ImGui.InputInt("Ferry Skipper data id", ref npcId))
                 embark.FerrySkipperDataId = (uint)System.Math.Max(0, npcId);
 
-            var territory = (int)embark.FerryTerritoryId;
-            if (ImGui.InputInt("Ferry territory id", ref territory))
-                embark.FerryTerritoryId = (ushort)System.Math.Clamp(territory, 0, ushort.MaxValue);
+            var ferryTerritory = (int)embark.FerryTerritoryId;
+            if (ImGui.InputInt("Ferry territory id", ref ferryTerritory))
+                embark.FerryTerritoryId = (ushort)System.Math.Clamp(ferryTerritory, 0, ushort.MaxValue);
 
             var sel = embark.SelectStringBoardIndex;
             if (ImGui.InputInt("SelectString board index", ref sel))

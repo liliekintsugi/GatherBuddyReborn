@@ -97,7 +97,7 @@ public sealed class EmbarkController : IDisposable
             return;
         }
 
-        var player = Dalamud.ClientState.LocalPlayer;
+        var player = Dalamud.Objects.LocalPlayer;
         if (player == null)
             return;
 
@@ -137,7 +137,7 @@ public sealed class EmbarkController : IDisposable
     private void TickMoving()
     {
         // Wait until vnavmesh reports done OR we are close enough to the NPC.
-        var player = Dalamud.ClientState.LocalPlayer;
+        var player = Dalamud.Objects.LocalPlayer;
         if (player == null) return;
 
         var dist = Vector3.Distance(player.Position, FerryStandPosition);
