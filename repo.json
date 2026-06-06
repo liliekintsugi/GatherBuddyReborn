@@ -1,0 +1,23 @@
+[
+  {
+    "Author": "The Combat Reborn Team (fork: liliekintsugi)",
+    "Name": "GatherBuddy Reborn (XIVPath fork)",
+    "InternalName": "GatherBuddyReborn",
+    "AssemblyVersion": "0.0.0.0",
+    "TestingAssemblyVersion": "0.0.0.0",
+    "RepoUrl": "https://github.com/liliekintsugi/GatherBuddyReborn",
+    "ApplicableVersion": "any",
+    "DalamudApiLevel": 15,
+    "TestingDalamudApiLevel": 15,
+    "IsTestingExclusive": false,
+    "Tags": ["Gathering","Fishing","Mining","Botany","Weather","Alarms","Automatic","Forager","OceanFishing"],
+    "CategoryTags": ["Jobs","Utility"],
+    "Description": "GatherBuddyReborn fork with Ocean Fishing automation and AutoHook spectral-aware preset switching. Tracking branch: feature/auto-ocean-fishing.",
+    "Punchline": "GBR + ocean fishing automation.",
+    "IconUrl": "https://raw.githubusercontent.com/FFXIV-CombatReborn/RebornAssets/main/IconAssets/GBR_Icon.png",
+    "DownloadLinkInstall": "https://github.com/liliekintsugi/GatherBuddyReborn/releases/download/nightly-feature-auto-ocean-fishing/GatherBuddyReborn.zip",
+    "DownloadLinkUpdate":  "https://github.com/liliekintsugi/GatherBuddyReborn/releases/download/nightly-feature-auto-ocean-fishing/GatherBuddyReborn.zip",
+    "DownloadLinkTesting": "https://github.com/liliekintsugi/GatherBuddyReborn/releases/download/nightly-feature-auto-ocean-fishing/GatherBuddyReborn.zip",
+    "AcceptsFeedback": false
+  }
+]

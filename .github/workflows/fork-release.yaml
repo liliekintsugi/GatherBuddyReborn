@@ -1,0 +1,117 @@
+name: Fork Nightly Release
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  Build:
+    runs-on: windows-latest
+    env:
+      REPO_NAME: ${{ github.repository }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Compute version
+        id: ver
+        shell: pwsh
+        run: |
+          $branch = "${{ github.ref_name }}" -replace '[^A-Za-z0-9\-\.]', '-'
+          $short  = "${{ github.sha }}".Substring(0,7)
+          $stamp  = Get-Date -Format 'yyyyMMdd.HHmm'
+          $assemblyVersion = "0.0.${{ github.run_number }}.0"
+          $tag = "nightly-$branch"
+          "branch=$branch"               | Out-File -Append -FilePath $Env:GITHUB_OUTPUT
+          "short=$short"                 | Out-File -Append -FilePath $Env:GITHUB_OUTPUT
+          "stamp=$stamp"                 | Out-File -Append -FilePath $Env:GITHUB_OUTPUT
+          "assembly=$assemblyVersion"    | Out-File -Append -FilePath $Env:GITHUB_OUTPUT
+          "tag=$tag"                     | Out-File -Append -FilePath $Env:GITHUB_OUTPUT
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Download Dalamud Latest
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri https://goatcorp.github.io/dalamud-distrib/latest.zip -OutFile latest.zip
+          Expand-Archive -Force latest.zip -DestinationPath "$env:AppData\XIVLauncher\addon\Hooks\dev"
+
+      - name: Restore NuGet Packages
+        run: dotnet restore Gatherbuddy/Gatherbuddy.csproj
+
+      - name: Build Plugin
+        shell: pwsh
+        run: |
+          dotnet build --no-restore -c Release Gatherbuddy/Gatherbuddy.csproj `
+            -p:AssemblyVersion=${{ steps.ver.outputs.assembly }} `
+            -p:FileVersion=${{ steps.ver.outputs.assembly }} `
+            -p:PackageVersion=${{ steps.ver.outputs.assembly }} `
+            -p:InformationalVersion="${{ steps.ver.outputs.assembly }}+${{ steps.ver.outputs.short }}" `
+            --output .\build
+
+      - name: Build raphael-cli from raphael-rs
+        shell: pwsh
+        run: |
+          git clone https://github.com/KonaeAkira/raphael-rs.git raphael-rs-temp
+          cd raphael-rs-temp
+          cargo build --release --package raphael-cli
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "Error: Failed to build raphael-cli"
+            exit 1
+          }
+          Copy-Item -Path ".\target\release\raphael-cli.exe" -Destination "..\build\raphael-cli.exe" -Force
+          cd ..
+          Remove-Item -Recurse -Force raphael-rs-temp
+
+      - name: Zip Plugin
+        shell: pwsh
+        run: |
+          Compress-Archive -Path .\build\* -DestinationPath .\build\GatherBuddyReborn.zip -Force
+
+      - name: Generate Dalamud manifest
+        shell: pwsh
+        run: |
+          $base    = "${{ github.event.repository.html_url }}"
+          $tag     = "${{ steps.ver.outputs.tag }}"
+          $version = "${{ steps.ver.outputs.assembly }}"
+          $asset   = "$base/releases/download/$tag/GatherBuddyReborn.zip"
+          $srcPath = "GatherBuddy/GatherBuddyReborn.json"
+          $json = Get-Content $srcPath -Raw | ConvertFrom-Json
+          $json | Add-Member -NotePropertyName 'AssemblyVersion'    -NotePropertyValue $version -Force
+          $json | Add-Member -NotePropertyName 'TestingAssemblyVersion' -NotePropertyValue $version -Force
+          $json | Add-Member -NotePropertyName 'DownloadLinkInstall' -NotePropertyValue $asset -Force
+          $json | Add-Member -NotePropertyName 'DownloadLinkUpdate'  -NotePropertyValue $asset -Force
+          $json | Add-Member -NotePropertyName 'DownloadLinkTesting' -NotePropertyValue $asset -Force
+          $json | Add-Member -NotePropertyName 'RepoUrl' -NotePropertyValue $base -Force
+          $json | ConvertTo-Json -Depth 8 | Set-Content .\build\GatherBuddyReborn.json -Encoding UTF8
+          Copy-Item .\build\GatherBuddyReborn.json .\GatherBuddyReborn.manifest.json -Force
+
+      - name: Publish prerelease
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: ${{ steps.ver.outputs.tag }} (${{ steps.ver.outputs.stamp }})
+          prerelease: true
+          generate_release_notes: false
+          body: |
+            Nightly build of branch `${{ steps.ver.outputs.branch }}` at commit ${{ steps.ver.outputs.short }}.
+
+            Manifest: `GatherBuddyReborn.json`
+            Plugin:   `GatherBuddyReborn.zip`
+          files: |
+            ./build/GatherBuddyReborn.zip
+            ./GatherBuddyReborn.manifest.json
+          token: ${{ secrets.GITHUB_TOKEN }}
