@@ -1,5 +1,6 @@
 using System.Linq;
 using Dalamud.Bindings.ImGui;
+using System.Collections.Generic;
 using GatherBuddy.AutoGather.OceanFishing;
 using GatherBuddy.Classes;
 using GatherBuddy.Plugin;
@@ -131,6 +132,9 @@ public partial class Interface
             ImGui.Separator();
         }
 
+        // Bait Advisor (PR 7a) — global across all AutoGather fish lists.
+        DrawBaitAdvisorSection();
+
         // Show the next ocean route per area, regardless of territory, as a debug helper.
         var now = GatherBuddy.Time.ServerTime;
         try
@@ -153,6 +157,70 @@ public partial class Interface
         catch (System.Exception e)
         {
             ImGui.TextDisabled($"Route lookup failed: {e.Message}");
+        }
+    }
+
+    private static int _baitAdvisorDesiredPerFish = BaitAdvisor.DefaultDesiredQtyPerFish;
+    private static List<BaitAdvisor.MissingBait>? _baitAdvisorSnapshot;
+
+    private static void DrawBaitAdvisorSection()
+    {
+        if (ImGui.CollapsingHeader("Bait Advisor (all AutoGather fish lists)"))
+        {
+            ImGui.TextDisabled("Reads your active + fallback AutoGather lists, resolves each fish's");
+            ImGui.TextDisabled("recommended bait, and surfaces what's missing. 'Add to buy list' queues");
+            ImGui.TextDisabled("the bait via the existing Vendor buy-list automation.");
+
+            if (ImGui.InputInt("Desired qty per fish", ref _baitAdvisorDesiredPerFish))
+                _baitAdvisorDesiredPerFish = System.Math.Clamp(_baitAdvisorDesiredPerFish, 1, 999);
+
+            if (ImGui.Button("Refresh"))
+                _baitAdvisorSnapshot = BaitAdvisor.Scan(_baitAdvisorDesiredPerFish);
+            ImGui.SameLine();
+            if (ImGui.Button("Queue ALL missing"))
+            {
+                _baitAdvisorSnapshot ??= BaitAdvisor.Scan(_baitAdvisorDesiredPerFish);
+                var n = BaitAdvisor.QueueAllMissing(_baitAdvisorSnapshot);
+                Plugin.Communicator.Print($"[BaitAdvisor] Queued {n} bait(s) to the active vendor buy list.");
+            }
+
+            var snap = _baitAdvisorSnapshot;
+            if (snap == null || snap.Count == 0)
+            {
+                ImGui.TextDisabled("Click Refresh to scan.");
+                return;
+            }
+
+            using var table = ElliLib.Raii.ImRaii.Table("##BaitAdvisorTable", 5,
+                ImGuiTableFlags.SizingStretchProp | ImGuiTableFlags.RowBg | ImGuiTableFlags.Borders);
+            if (!table) return;
+            ImGui.TableSetupColumn("Bait");
+            ImGui.TableSetupColumn("Have");
+            ImGui.TableSetupColumn("Desired");
+            ImGui.TableSetupColumn("# Fish");
+            ImGui.TableSetupColumn("Action");
+            ImGui.TableHeadersRow();
+
+            foreach (var b in snap)
+            {
+                ImGui.TableNextRow();
+                ImGui.TableNextColumn();
+                var color = b.HaveQty < b.DesiredQty
+                    ? new System.Numerics.Vector4(1f, 0.55f, 0.4f, 1f)
+                    : new System.Numerics.Vector4(0.6f, 1f, 0.6f, 1f);
+                ImGui.TextColored(color, b.BaitName);
+                ImGui.TableNextColumn(); ImGui.TextUnformatted(b.HaveQty.ToString());
+                ImGui.TableNextColumn(); ImGui.TextUnformatted(b.DesiredQty.ToString());
+                ImGui.TableNextColumn(); ImGui.TextUnformatted(b.FishNames.Count.ToString());
+                if (ImGui.IsItemHovered() && b.FishNames.Count > 0)
+                    ImGui.SetTooltip(string.Join("\n", b.FishNames));
+                ImGui.TableNextColumn();
+                using (ElliLib.Raii.ImRaii.Disabled(b.HaveQty >= b.DesiredQty))
+                {
+                    if (ImGui.Button($"Add##{b.BaitItemId}"))
+                        BaitAdvisor.QueueRestock(b);
+                }
+            }
         }
     }
 }

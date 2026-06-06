@@ -100,6 +100,7 @@ public partial class GatherBuddy : IDalamudPlugin
     internal readonly AlarmManager                   AlarmManager;
     internal readonly GatherWindowManager            GatherWindowManager;
     internal readonly AutoGatherListsManager         AutoGatherListsManager;
+    public static    AutoGatherListsManager?        AutoGatherLists { get; private set; }
     internal readonly WindowSystem                   WindowSystem;
     internal readonly Interface                      Interface;
     internal readonly Executor                       Executor;
@@ -149,6 +150,7 @@ public partial class GatherBuddy : IDalamudPlugin
             LocationManager        = LocationManager.Load();
             AlarmManager           = AlarmManager.Load();
             AutoGatherListsManager = AutoGatherListsManager.Load();
+            AutoGatherLists        = AutoGatherListsManager;
             GatherWindowManager    = GatherWindowManager.Load(AlarmManager);
             AlarmManager.ForceEnable();
             CraftingListManager   = new Crafting.CraftingListManager();
