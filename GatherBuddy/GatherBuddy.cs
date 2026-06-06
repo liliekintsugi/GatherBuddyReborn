@@ -74,6 +74,7 @@ public partial class GatherBuddy : IDalamudPlugin
     public static AutoGather.AutoGather AutoGather      { get; private set; } = null!;
     public static AutoGather.OceanFishing.SpectralDetector SpectralDetector { get; private set; } = null!;
     public static AutoGather.OceanFishing.OceanPresetCache OceanPresetCache { get; private set; } = null!;
+    public static AutoGather.OceanFishing.AutoOceanFishing AutoOceanFishing { get; private set; } = null!;
     public static AutoHookIntegration.BiteTimerService BiteTimerService { get; private set; } = null!;
     public static AutoGather.Collectables.CollectableManager CollectableManager { get; private set; } = null!;
     public static Crafting.CraftingListManager CraftingListManager { get; private set; } = null!;
@@ -181,6 +182,7 @@ public partial class GatherBuddy : IDalamudPlugin
             AutoGather   = new AutoGather.AutoGather(this);
             SpectralDetector = new AutoGather.OceanFishing.SpectralDetector();
             OceanPresetCache = new AutoGather.OceanFishing.OceanPresetCache();
+            AutoOceanFishing = new AutoGather.OceanFishing.AutoOceanFishing(SpectralDetector, OceanPresetCache, FishRecorder.Parser);
             CollectableManager = new AutoGather.Collectables.CollectableManager(Dalamud.Framework, Dalamud.Conditions, Config);
             global::GatherBuddy.AutoGather.Collectables.CollectableInventoryHelper.InitializeAsync();
             CraftingGatherBridge.BindCollectableManager(CollectableManager);
@@ -343,10 +345,11 @@ public partial class GatherBuddy : IDalamudPlugin
         try
         {
             SpectralDetector?.Tick();
+            AutoOceanFishing?.Tick();
         }
         catch (Exception e)
         {
-            Log.Error($"Error while running spectral detector: {e}");
+            Log.Error($"Error while running ocean fishing modules: {e}");
         }
     }
 
@@ -362,6 +365,7 @@ public partial class GatherBuddy : IDalamudPlugin
         ContextMenu?.Dispose();
         UptimeManager?.Dispose();
         AutoGather?.Dispose();
+        AutoOceanFishing?.Dispose();
         SpectralDetector?.Dispose();
         CollectableManager?.Dispose();
         VendorBuyListManager?.Dispose();

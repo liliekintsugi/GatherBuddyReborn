@@ -33,8 +33,24 @@ public partial class GatherBuddy
                 Communicator.Print($"[Ocean] Territory={Dalamud.ClientState.TerritoryType} "
                                  + $"weatherId={SpectralDetector.LastWeatherId} "
                                  + $"spectral={SpectralDetector.IsSpectralActive} "
-                                 + $"cachedPresets={OceanPresetCache.Count}");
+                                 + $"cachedPresets={OceanPresetCache.Count} "
+                                 + $"auto={AutoOceanFishing.Enabled} "
+                                 + $"route={AutoOceanFishing.CurrentRoute?.Name ?? "-"} "
+                                 + $"segment={AutoOceanFishing.CurrentSegment}");
                 return;
+
+            case "auto":
+                if (parts.Length < 2)
+                {
+                    Communicator.Print($"[Ocean] auto is currently {(AutoOceanFishing.Enabled ? "ON" : "OFF")}");
+                    return;
+                }
+                switch (parts[1].ToLowerInvariant())
+                {
+                    case "on":  AutoOceanFishing.Enabled = true;  Communicator.Print("[Ocean] auto ON");  return;
+                    case "off": AutoOceanFishing.Enabled = false; Communicator.Print("[Ocean] auto OFF"); return;
+                    default:    Communicator.Print("[Ocean] auto expects on|off"); return;
+                }
 
             case "preset":
                 HandlePresetCommand(parts);

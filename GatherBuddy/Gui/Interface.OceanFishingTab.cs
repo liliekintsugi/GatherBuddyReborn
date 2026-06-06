@@ -49,6 +49,25 @@ public partial class Interface
 
         ImGui.Separator();
 
+        // AutoOceanFishing controls (PR 3).
+        var auto = GatherBuddy.AutoOceanFishing;
+        if (auto != null)
+        {
+            var enabled = auto.Enabled;
+            if (ImGui.Checkbox("Enable AutoOceanFishing (preset switch on segment / spectral)", ref enabled))
+                auto.Enabled = enabled;
+
+            var areaIdx = auto.PreferredArea == OceanArea.Othard ? 1 : 0;
+            string[] areas = ["Aldenard", "Othard"];
+            if (ImGui.Combo("Preferred area", ref areaIdx, areas, areas.Length))
+                auto.PreferredArea = areaIdx == 1 ? OceanArea.Othard : OceanArea.Aldenard;
+
+            ImGui.TextUnformatted($"Current route   : {auto.CurrentRoute?.Name ?? "<none>"}");
+            ImGui.TextUnformatted($"Current segment : {auto.CurrentSegment} (spectral={auto.CurrentSpectral})");
+            ImGui.TextUnformatted($"Last applied    : {auto.LastAppliedPreset ?? "<none>"}");
+            ImGui.Separator();
+        }
+
         // Show the next ocean route per area, regardless of territory, as a debug helper.
         var now = GatherBuddy.Time.ServerTime;
         try
