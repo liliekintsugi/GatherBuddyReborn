@@ -238,6 +238,110 @@ la Configuration GBR dans une prochaine itération.
 
 ---
 
+### PR 7a — `BaitAdvisor` — commit `477d31f`
+**Quoi.** Module read-only `AutoGather/OceanFishing/BaitAdvisor.cs`.
+
+- `Scan(desiredPerFish)` : parcourt `AutoGatherListsManager.ActiveItems + FallbackItems`,
+  garde les `Fish` non-spearfish, groupe par `Fish.InitialBait`, snapshot inventaire
+  via `InventoryManager` (Inventory1..4). Retourne `MissingBait(BaitItemId,
+  BaitName, IconId, HaveQty, DesiredQty, FishNames)` triés (manquants d'abord).
+- `QueueRestock(bait)` / `QueueAllMissing(baits)` : push dans la buy list
+  active via `VendorBuyListManager.TryIncrementTarget(itemId, need)` — la
+  couche vendor résout NPC / shop / prix toute seule.
+
+**Pourquoi.** Surface UX pour voir d'un coup d'œil quels appâts manquent
+sur **n'importe quelle gather list pêche** (pas que ocean). PR 7a n'auto-pas
+les achats — c'est la PR 7b qui automatise.
+
+**Wiring.**
+- `GatherBuddy.cs` : nouveau static `AutoGatherLists` (raccourci public sur
+  l'instance interne `AutoGatherListsManager`).
+- UI : section dépliable « Bait Advisor » sur l'onglet Ocean Fishing avec
+  table 5 colonnes (Bait / Have / Desired / # Fish / Action), tooltip listant
+  les poissons concernés au survol, bouton « Refresh » et « Queue ALL missing ».
+
+**Caveat.** Le `DesiredQty` est juste `fishCount * DesiredQtyPerFish` (heuristique).
+Pas de prise en compte des chains mooch / des baits intermédiaires.
+
+---
+
+### PR 7b — `BaitGuard` — commit `5715d61`
+**Quoi.** Service tick périodique `AutoGather/OceanFishing/BaitGuard.cs` qui
+appelle `BaitAdvisor.Scan` toutes les `CheckInterval` secondes (default 15s),
+queue les baits sous `TriggerBelowFraction * DesiredQty` (default 50%),
+et appelle `VendorBuyListManager.Start()` si la pipeline vendor n'est pas
+déjà en cours.
+
+**Pourquoi.** Pendant qu'AutoGather pêche, on ne veut pas tomber à sec. Le
+guard fait le check en background et déclenche le restock automatiquement
+quand un seuil est atteint, sans toucher la machine à états d'AutoGather
+(pas de pause explicite — pendant que le shop est ouvert, AutoGather idle
+naturellement, puis reprend).
+
+**Wiring.** Instancié dans `GatherBuddy.cs`, tique dans `Update()`. UI section
+dépliable avec toggle, `OnlyWhenAutoGatherEnabled` (default ON),
+`TriggerBelowFraction` slider, `DesiredQtyPerFish`, `CheckInterval`, et
+compteurs (last/total queued).
+
+**Caveat.** Si plusieurs presets fish utilisent le même bait dans la même
+liste, on multiplie inutilement le `DesiredQty`. À déduplicater par bait
+plutôt que par fish dans une prochaine itération.
+
+---
+
+### PR 7c — Auto-toggle AutoHook on trip — commit `70af294`
+**Quoi.** Modifs dans `AutoOceanFishing.cs`.
+
+- `OnEnterTrip` : `_savedPluginState = AutoHook.GetPluginState()`,
+  `_savedAutoStart = AutoHook.GetAutoStartFishing()`, puis `SetPluginState(true)`
+  + `SetAutoStartFishing(true)`.
+- `OnLeaveTrip` : restaure les deux valeurs sauvegardées.
+- Toggle UI `ManageAutoHookState` (default ON) pour désactiver le comportement.
+
+**Pourquoi.** Avant PR 7c, AutoOceanFishing switchait les presets mais
+n'activait jamais AutoHook lui-même — donc rien ne pêchait si le joueur
+n'avait pas pré-activé AutoHook manuellement. Avec PR 7c le pipeline est
+end-to-end : embark → preset switch → AutoHook ON → casts → preset re-switch
+sur spectral → desembark → AutoHook restauré.
+
+**Caveat.** Si AutoHook est rechargé entre `OnEnterTrip` et `OnLeaveTrip`,
+les états sauvegardés deviennent stale (et `RestoreAutoHook` early-out si
+`!AutoHook.Enabled`). Acceptable pour v1.
+
+---
+
+### PR 8 — `LevelingMode` — commit `1e26cae` (+ fix `257e0f8`)
+**Quoi.** Module `AutoGather/OceanFishing/LevelingMode.cs` qui auto-génère
+une `AutoGatherList` ciblant le `FishingSpot` au plus haut niveau dans
+`[playerLvl + LevelMin, playerLvl + LevelMax]` (défaut `[-3, +2]`), exclut
+spearfishing, préfère les spots avec aetheryte.
+
+- `Retarget()` : sélection du spot + suppression de l'ancienne liste +
+  création d'une nouvelle list nommée `GBR Leveling Lv{N} {SpotName}` avec
+  tous les `Fish` du spot, `Enabled = true`, push via
+  `AutoGatherListsManager.AddList`. Force `GatherBuddy.AutoGather.Enabled = true`.
+- `Tick()` : si territoire == 900 OU `EmbarkController.State ≠ Idle/Boarded`,
+  désactive la liste générée (`SetActiveItems()` refresh) — handoff au
+  pipeline ocean. Sinon retargete périodiquement (default 5 min).
+- `Cleanup()` au toggle-off supprime la liste.
+
+**Pourquoi.** Combler les ~24 min réelles entre deux trips ocean. Le joueur
+ne reste pas idle au quai : il level sa Fisher pendant qu'il attend.
+
+**Wiring.** Static dans `GatherBuddy.cs`, tick dans `Update()`. UI dépliable :
+toggle + sliders LevelMin/LevelMax/RetargetEvery, état live, bouton « Force
+retarget now ». Modification de `FishingSpot.cs` (GameData) pour exposer
+`GatheringLevel` lu de la sheet Lumina à la construction.
+
+**Fix CI.** Premier build a cassé : `FishingSpot.Name` est `string`, j'avais
+écrit `.English` en supposant un `MultiString`. Commit de fix : `257e0f8`.
+
+**Caveat.** Aucune prise en compte des unlocks (Big Fish, achievements,
+zones débloquées). Le joueur doit s'assurer que le spot choisi est
+accessible. À durcir si jamais on lit la sheet `Achievement` / quest flags.
+
+---
+
 ## Architecture des fichiers ajoutés
 
 ```
@@ -245,9 +349,15 @@ GatherBuddy/AutoGather/OceanFishing/
 ├── SpectralDetector.cs      # PR 1
 ├── OceanPresetCache.cs      # PR 2
 ├── OceanCommands.cs         # PR 2 (/gbocean handler, partial GatherBuddy)
-├── AutoOceanFishing.cs      # PR 3
+├── AutoOceanFishing.cs      # PR 3 (+ AutoHook toggle PR 7c)
 ├── EmbarkController.cs      # PR 4 (+ Restocking state PR 6)
-└── BaitRestock.cs           # PR 6
+├── BaitRestock.cs           # PR 6
+├── BaitAdvisor.cs           # PR 7a
+├── BaitGuard.cs             # PR 7b
+└── LevelingMode.cs          # PR 8
+
+GatherBuddy.GameData/Classes/
+└── FishingSpot.cs           # PR 8 — expose GatheringLevel
 
 GatherBuddy/Gui/
 └── Interface.OceanFishingTab.cs   # tab "Ocean Fishing"
@@ -273,15 +383,20 @@ Distribution:
 GatherBuddy ctor:
   ├─ FishRecorder           (existant)
   ├─ AutoGather             (existant)
+  ├─ AutoGatherLists        (alias public statique sur AutoGatherListsManager — PR 7a)
   ├─ SpectralDetector       (PR 1)
   ├─ OceanPresetCache       (PR 2)
-  ├─ AutoOceanFishing       (PR 3, ref SpectralDetector + OceanPresetCache + FishRecorder.Parser)
-  └─ EmbarkController       (PR 4, owns BaitRestock from PR 6)
+  ├─ AutoOceanFishing       (PR 3 + PR 7c, ref SpectralDetector + OceanPresetCache + FishRecorder.Parser)
+  ├─ EmbarkController       (PR 4, owns BaitRestock from PR 6)
+  ├─ BaitGuard              (PR 7b)
+  └─ LevelingMode           (PR 8)
 
 Update tick (chaque frame):
   ├─ SpectralDetector.Tick()      # mise à jour weather id + event
-  ├─ AutoOceanFishing.Tick()      # transitions trip / handoff
-  └─ EmbarkController.Tick()      # state machine embark
+  ├─ AutoOceanFishing.Tick()      # transitions trip / handoff + AutoHook on/off
+  ├─ EmbarkController.Tick()      # state machine embark (Restocking inclus)
+  ├─ BaitGuard.Tick()             # restock auto pendant AutoGather
+  └─ LevelingMode.Tick()          # auto-fish entre les trips
 
 Dispose:
   └─ ordre inverse, EmbarkController.Dispose() appelle vnavmesh.Path.Stop()
@@ -294,13 +409,20 @@ Dispose:
 1. **SpectralDetector debug** : territory, IDs trackés, weather courante,
    spectral on/off.
 2. **AutoOceanFishing** : toggle + zone préférée + route/segment/spectral
-   actuels + dernier preset appliqué.
+   actuels + dernier preset appliqué + `ManageAutoHookState` (PR 7c).
 3. **EmbarkController** : toggle + état + last error + champs runtime
    (FerryStandPosition Vector3, FerrySkipperDataId, FerryTerritoryId,
    SelectStringBoardIndex).
 4. **BaitRestock** : toggle + Guid buy list + snapshot inventaire (par bait,
    `have / target` avec couleur si < low threshold).
-5. **Routes prochaines** Aldenard + Othard avec bouton « Apply seg 0
+5. **Bait Advisor (PR 7a)** : section dépliable, table missing baits
+   (Bait / Have / Desired / # Fish / Action), boutons « Refresh » et
+   « Queue ALL missing ».
+6. **Bait Guard (PR 7b)** : toggle, `OnlyWhenAutoGatherEnabled`,
+   `TriggerBelowFraction`, `DesiredQtyPerFish`, `CheckInterval`, compteurs.
+7. **Leveling Mode (PR 8)** : toggle, sliders LevelMin/LevelMax/RetargetEvery,
+   spot/list courants, bouton « Force retarget now ».
+8. **Routes prochaines** Aldenard + Othard avec bouton « Apply seg 0
    (auto spectral) » et « Clear cache ».
 
 ---
@@ -322,27 +444,31 @@ Dispose:
 | # | Sujet | Action prévue |
 |---|-------|---------------|
 | 1 | Mapping spectral via `Name.Contains("Spectral")` | Fallback `IKDRouteTable` si une route échappe |
-| 2 | Sélection naïve fish par spot (pas de priorité points/blue/intuition) | Config `OceanPriority` à ajouter |
+| 2 | Sélection naïve fish par spot dans `OceanPresetCache` (pas de priorité points/blue/intuition) | Config `OceanPriority` à ajouter |
 | 3 | Pas de fallback timer si aucun cast (segment stuck à 0) | Timer 7 min en backup dans `AutoOceanFishing` |
 | 4 | Coords ferry / data id NPC **non vérifiés** en jeu | Test live + correction depuis l'UI au premier run |
-| 5 | `BuyListId` + autres params non persistés | Brancher sur `Configuration.cs` |
+| 5 | `BuyListId` + autres params non persistés (PR 6/7/8) | Brancher sur `Configuration.cs` |
 | 6 | Pas de planification "embark dans X minutes" | Time-gate vs `OceanUptime.NextOceanRoute().StartTime` |
 | 7 | Pas de gestion explicite des poissons "blue fish" / intuition | Combinable avec #2 |
 | 8 | Pas de retour automatique en ville post-trip | Hook `OnLeaveTrip` pour replanifier le prochain embark |
+| 9 | `BaitGuard.DesiredQty` multiplié par fish (pas dedup par bait) | Dédoublonnage dans `BaitAdvisor.Scan` |
+| 10 | `LevelingMode` ne tient pas compte des unlocks (Big Fish / achievements / zones) | Lecture sheet `Achievement` / quest flags si besoin |
+| 11 | `BaitAdvisor.QueueAllMissing` ne déclenche pas auto `Start()` | Volontaire (PR 7a = read-only) — PR 7b s'en charge déjà |
 
 ---
 
 ## Prochaines PR candidates
 
-- **PR 7** : Persistance config (`OceanFishingConfig` dans `Configuration`),
+- **PR 9** : Persistance config (`OceanFishingConfig` dans `Configuration`),
   inclut `BuyListId`, `FerryStandPosition`, `FerrySkipperDataId`, `PreferredArea`,
-  seuils restock.
-- **PR 8** : Sélection prioritaire des poissons (Points / Blue Fish /
-  Intuition / Custom), refactor de `OceanPresetCache.ResolveFishForSpot`.
-- **PR 9** : Planification embark (déclencher quand le prochain départ
+  seuils restock, settings BaitGuard / LevelingMode.
+- **PR 10** : Priorité poissons (Points / Blue Fish / Intuition / Custom),
+  refactor de `OceanPresetCache.ResolveFishForSpot`.
+- **PR 11** : Planification embark (déclencher quand le prochain départ
   est dans `LeadTimeMinutes`).
-- **PR 10** : Boucle multi-trip continue (post-arrivée → reset state →
-  attendre prochain départ).
+- **PR 12** : Boucle multi-trip continue (post-arrivée → reset state →
+  attendre prochain départ, handoff LevelingMode entre).
+- **PR 13** : Détection unlocks pour `LevelingMode` (sheet Achievement).
 
 ---
 
@@ -365,5 +491,19 @@ Pour tester en jeu :
 3. Ouvrir onglet « Ocean Fishing ».
 4. Vérifier que SpectralDetector liste des IDs > 0 (sinon, log warning).
 5. Embarquer manuellement, activer AutoOceanFishing, vérifier que les
-   presets switchent au passage spectral.
-6. Plus tard : activer Embark + BaitRestock pour tester le pipeline complet.
+   presets switchent au passage spectral. Avec PR 7c, AutoHook s'active
+   automatiquement au passage en territoire 900.
+6. Activer **BaitAdvisor** (PR 7a) — clique Refresh, vérifier que les baits
+   manquants apparaissent. Test « Add » → vérifier que la buy list Vulcan se
+   remplit.
+7. Activer **BaitGuard** (PR 7b) — laisser tourner AutoGather sur une fish
+   list. Quand un bait passe sous le seuil, le vendor list doit démarrer
+   automatiquement.
+8. Activer **LevelingMode** (PR 8) — vérifier qu'un spot est sélectionné
+   correspondant à ton niveau Fisher, qu'une liste `GBR Leveling Lv...` est
+   créée, et que AutoGather la pêche. Quand un trip ocean démarre, la
+   liste doit se désactiver automatiquement.
+9. **Pipeline complet** : activer Embark + BaitRestock + AutoOceanFishing +
+   BaitGuard + LevelingMode + PR 7c. Le joueur ne devrait plus rien toucher
+   en jeu : level entre les trips, restock auto, embark auto à l'horaire,
+   pêche auto sur le bateau, retour, recommencer.
