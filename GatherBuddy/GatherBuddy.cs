@@ -76,6 +76,7 @@ public partial class GatherBuddy : IDalamudPlugin
     public static AutoGather.OceanFishing.OceanPresetCache OceanPresetCache { get; private set; } = null!;
     public static AutoGather.OceanFishing.AutoOceanFishing AutoOceanFishing { get; private set; } = null!;
     public static AutoGather.OceanFishing.EmbarkController EmbarkController { get; private set; } = null!;
+    public static AutoGather.OceanFishing.BaitGuard        BaitGuard        { get; private set; } = null!;
     public static AutoHookIntegration.BiteTimerService BiteTimerService { get; private set; } = null!;
     public static AutoGather.Collectables.CollectableManager CollectableManager { get; private set; } = null!;
     public static Crafting.CraftingListManager CraftingListManager { get; private set; } = null!;
@@ -187,6 +188,7 @@ public partial class GatherBuddy : IDalamudPlugin
             OceanPresetCache = new AutoGather.OceanFishing.OceanPresetCache();
             AutoOceanFishing = new AutoGather.OceanFishing.AutoOceanFishing(SpectralDetector, OceanPresetCache, FishRecorder.Parser);
             EmbarkController = new AutoGather.OceanFishing.EmbarkController();
+            BaitGuard        = new AutoGather.OceanFishing.BaitGuard();
             CollectableManager = new AutoGather.Collectables.CollectableManager(Dalamud.Framework, Dalamud.Conditions, Config);
             global::GatherBuddy.AutoGather.Collectables.CollectableInventoryHelper.InitializeAsync();
             CraftingGatherBridge.BindCollectableManager(CollectableManager);
@@ -351,6 +353,7 @@ public partial class GatherBuddy : IDalamudPlugin
             SpectralDetector?.Tick();
             AutoOceanFishing?.Tick();
             EmbarkController?.Tick();
+            BaitGuard?.Tick();
         }
         catch (Exception e)
         {

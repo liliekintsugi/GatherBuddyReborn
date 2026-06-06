@@ -135,6 +135,9 @@ public partial class Interface
         // Bait Advisor (PR 7a) — global across all AutoGather fish lists.
         DrawBaitAdvisorSection();
 
+        // Bait Guard (PR 7b) — auto-queue + auto-start vendor list on threshold.
+        DrawBaitGuardSection();
+
         // Show the next ocean route per area, regardless of territory, as a debug helper.
         var now = GatherBuddy.Time.ServerTime;
         try
@@ -158,6 +161,40 @@ public partial class Interface
         {
             ImGui.TextDisabled($"Route lookup failed: {e.Message}");
         }
+    }
+
+    private static void DrawBaitGuardSection()
+    {
+        var guard = GatherBuddy.BaitGuard;
+        if (guard == null) return;
+        if (!ImGui.CollapsingHeader("Bait Guard (auto-restock during AutoGather)"))
+            return;
+
+        var enabled = guard.Enabled;
+        if (ImGui.Checkbox("Enable", ref enabled))
+            guard.Enabled = enabled;
+
+        var only = guard.OnlyWhenAutoGatherEnabled;
+        if (ImGui.Checkbox("Only when AutoGather is running", ref only))
+            guard.OnlyWhenAutoGatherEnabled = only;
+
+        var frac = guard.TriggerBelowFraction;
+        if (ImGui.SliderFloat("Trigger below (fraction of desired)", ref frac, 0.05f, 1f, "%.2f"))
+            guard.TriggerBelowFraction = System.Math.Clamp(frac, 0.05f, 1f);
+
+        var qty = guard.DesiredQtyPerFish;
+        if (ImGui.InputInt("Desired qty per fish", ref qty))
+            guard.DesiredQtyPerFish = System.Math.Clamp(qty, 1, 999);
+
+        var interval = (int)guard.CheckInterval.TotalSeconds;
+        if (ImGui.SliderInt("Check interval (s)", ref interval, 5, 120))
+            guard.CheckInterval = System.TimeSpan.FromSeconds(interval);
+
+        ImGui.TextUnformatted($"Last check : {(guard.LastCheckUtc == System.DateTime.MinValue ? "<never>" : guard.LastCheckUtc.ToLocalTime().ToString("HH:mm:ss"))}");
+        ImGui.TextUnformatted($"Last queued: {guard.LastQueuedCount}");
+        ImGui.TextUnformatted($"Total queued: {guard.TotalQueuedCount}");
+        if (!string.IsNullOrEmpty(guard.LastStatus))
+            ImGui.TextDisabled(guard.LastStatus);
     }
 
     private static int _baitAdvisorDesiredPerFish = BaitAdvisor.DefaultDesiredQtyPerFish;
