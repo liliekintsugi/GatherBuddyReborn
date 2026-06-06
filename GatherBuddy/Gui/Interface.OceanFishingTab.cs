@@ -57,6 +57,16 @@ public partial class Interface
             var othard   = OceanUptime.NextOceanRoute(OceanArea.Othard,   now);
             ImGui.TextUnformatted($"Next route (Aldenard): {aldenard.Name}  [start: {aldenard.StartTime}]");
             ImGui.TextUnformatted($"Next route (Othard):   {othard.Name}  [start: {othard.StartTime}]");
+
+            ImGui.Separator();
+            ImGui.TextUnformatted($"Cached presets: {GatherBuddy.OceanPresetCache.Count}");
+            if (ImGui.Button("Apply Aldenard seg 0 (auto spectral)"))
+                GatherBuddy.OceanPresetCache.Apply(aldenard, 0, detector.IsSpectralActive);
+            ImGui.SameLine();
+            if (ImGui.Button("Apply Othard seg 0 (auto spectral)"))
+                GatherBuddy.OceanPresetCache.Apply(othard, 0, detector.IsSpectralActive);
+            if (ImGui.Button("Clear cache"))
+                GatherBuddy.OceanPresetCache.Clear();
         }
         catch (System.Exception e)
         {

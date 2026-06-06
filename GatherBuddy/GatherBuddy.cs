@@ -73,6 +73,7 @@ public partial class GatherBuddy : IDalamudPlugin
     public static WaymarkManager        WaymarkManager  { get; private set; } = null!;
     public static AutoGather.AutoGather AutoGather      { get; private set; } = null!;
     public static AutoGather.OceanFishing.SpectralDetector SpectralDetector { get; private set; } = null!;
+    public static AutoGather.OceanFishing.OceanPresetCache OceanPresetCache { get; private set; } = null!;
     public static AutoHookIntegration.BiteTimerService BiteTimerService { get; private set; } = null!;
     public static AutoGather.Collectables.CollectableManager CollectableManager { get; private set; } = null!;
     public static Crafting.CraftingListManager CraftingListManager { get; private set; } = null!;
@@ -179,6 +180,7 @@ public partial class GatherBuddy : IDalamudPlugin
             BiteTimerService = new AutoHookIntegration.BiteTimerService(pluginInterface.ConfigDirectory.FullName);
             AutoGather   = new AutoGather.AutoGather(this);
             SpectralDetector = new AutoGather.OceanFishing.SpectralDetector();
+            OceanPresetCache = new AutoGather.OceanFishing.OceanPresetCache();
             CollectableManager = new AutoGather.Collectables.CollectableManager(Dalamud.Framework, Dalamud.Conditions, Config);
             global::GatherBuddy.AutoGather.Collectables.CollectableInventoryHelper.InitializeAsync();
             CraftingGatherBridge.BindCollectableManager(CollectableManager);

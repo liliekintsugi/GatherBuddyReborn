@@ -117,6 +117,12 @@ public partial class GatherBuddy
             ShowInHelp  = true,
         };
 
+        _commands["/gbocean"] = new CommandInfo(OnGbOcean)
+        {
+            HelpMessage = "Ocean fishing helpers. '/gbocean preset [aldenard|othard] [0|1|2] [normal|spectral]' applies the AutoHook preset for that segment. '/gbocean clear' empties the preset cache.",
+            ShowInHelp  = true,
+        };
+
         foreach (var (command, info) in _commands)
             Dalamud.Commands.AddHandler(command, info);
     }
