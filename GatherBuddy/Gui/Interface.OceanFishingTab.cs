@@ -138,6 +138,9 @@ public partial class Interface
         // Bait Guard (PR 7b) — auto-queue + auto-start vendor list on threshold.
         DrawBaitGuardSection();
 
+        // Leveling mode (PR 8) — auto-fish at nearest-level hole between ocean trips.
+        DrawLevelingModeSection();
+
         // Show the next ocean route per area, regardless of territory, as a debug helper.
         var now = GatherBuddy.Time.ServerTime;
         try
@@ -161,6 +164,46 @@ public partial class Interface
         {
             ImGui.TextDisabled($"Route lookup failed: {e.Message}");
         }
+    }
+
+    private static void DrawLevelingModeSection()
+    {
+        var lvling = GatherBuddy.LevelingMode;
+        if (lvling == null) return;
+        if (!ImGui.CollapsingHeader("Leveling Mode (auto-fish nearest-level hole)"))
+            return;
+
+        var enabled = lvling.Enabled;
+        if (ImGui.Checkbox("Enable", ref enabled))
+        {
+            lvling.Enabled = enabled;
+            if (!enabled)
+                lvling.Cleanup();
+        }
+
+        ImGui.TextDisabled("Auto-pauses on ocean trip or while embarking; cleans up its temp list on toggle-off.");
+
+        var lo = lvling.LevelMin;
+        if (ImGui.SliderInt("Level offset MIN (relative to player)", ref lo, -20, 0))
+            lvling.LevelMin = lo;
+
+        var hi = lvling.LevelMax;
+        if (ImGui.SliderInt("Level offset MAX (relative to player)", ref hi, 0, 10))
+            lvling.LevelMax = hi;
+
+        var retarget = (int)lvling.RetargetEvery.TotalMinutes;
+        if (ImGui.SliderInt("Retarget every (min)", ref retarget, 1, 30))
+            lvling.RetargetEvery = System.TimeSpan.FromMinutes(retarget);
+
+        ImGui.TextUnformatted($"Current spot : {lvling.CurrentTargetSpot?.Name.English ?? "<none>"}");
+        if (lvling.CurrentTargetSpot != null)
+            ImGui.TextUnformatted($"  Level={lvling.CurrentTargetSpot.GatheringLevel}, fish={lvling.CurrentTargetSpot.Items.Length}, territory={lvling.CurrentTargetSpot.Territory.Name}");
+        ImGui.TextUnformatted($"Current list : {lvling.CurrentList?.Name ?? "<none>"}");
+        if (!string.IsNullOrEmpty(lvling.LastStatus))
+            ImGui.TextDisabled(lvling.LastStatus);
+
+        if (ImGui.Button("Force retarget now"))
+            lvling.Retarget();
     }
 
     private static void DrawBaitGuardSection()

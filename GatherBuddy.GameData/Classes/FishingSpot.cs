@@ -74,12 +74,15 @@ public class FishingSpot : IComparable<FishingSpot>, ILocation
 
     public Dictionary<uint, List<Vector3>> WorldPositions { get; internal set; } = new();
 
+    public byte GatheringLevel { get; private init; }
+
     public int CompareTo(FishingSpot? obj)
         => SheetId.CompareTo(obj?.SheetId ?? 0);
 
     public FishingSpot(GameData data, FishingSpotRow spot)
     {
         _data          = spot;
+        GatheringLevel = spot.GatheringLevel;
         Territory      = data.FindOrAddTerritory(FishingSpotTerritoryHacks(data, spot)) ?? Territory.Invalid;
         Name           = FishingSpotNameHacks(data, spot);
         IntegralXCoord = Maps.MarkerToMap(spot.X, Territory.SizeFactor);
