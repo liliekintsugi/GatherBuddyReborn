@@ -36,6 +36,8 @@ public sealed class EmbarkController : IDisposable
     // Index into the SelectString menu that boards the next voyage. Game-version dependent; usually 0.
     public int SelectStringBoardIndex { get; set; } = 0;
 
+    public BaitRestock Restock { get; } = new();
+
     // Start walking when next departure is within this many minutes.
     public int LeadTimeMinutes { get; set; } = 3;
 
@@ -67,6 +69,7 @@ public sealed class EmbarkController : IDisposable
             switch (State)
             {
                 case EmbarkState.Idle:           TickIdle();           break;
+                case EmbarkState.Restocking:     TickRestocking();     break;
                 case EmbarkState.Pathing:        TickPathing();        break;
                 case EmbarkState.Moving:         TickMoving();         break;
                 case EmbarkState.AtNpc:          TickAtNpc();          break;
@@ -101,6 +104,36 @@ public sealed class EmbarkController : IDisposable
         if (player == null)
             return;
 
+        // Restock first if configured; otherwise proceed straight to pathing.
+        if (Restock.Enabled && Restock.AnyMissing())
+        {
+            var r = Restock.TryStart();
+            GatherBuddy.Log.Information($"[Embark] Restock pre-check → {r} ({Restock.LastStatus})");
+            if (r == BaitRestock.RestockResult.Started || r == BaitRestock.RestockResult.AlreadyRunning)
+            {
+                Transition(EmbarkState.Restocking);
+                return;
+            }
+            // NotConfigured / Failed — fall through and let the user fix it; do not block embark.
+        }
+
+        _pathTask = VNavmesh.Nav.Pathfind(player.Position, FerryStandPosition, false);
+        Transition(EmbarkState.Pathing);
+    }
+
+    private void TickRestocking()
+    {
+        if (Restock.IsRunning)
+            return;
+
+        GatherBuddy.Log.Information($"[Embark] Restock done ({Restock.LastStatus}); resuming embark.");
+
+        var player = Dalamud.Objects.LocalPlayer;
+        if (player == null)
+        {
+            Transition(EmbarkState.Idle);
+            return;
+        }
         _pathTask = VNavmesh.Nav.Pathfind(player.Position, FerryStandPosition, false);
         Transition(EmbarkState.Pathing);
     }
@@ -232,6 +265,7 @@ public sealed class EmbarkController : IDisposable
 public enum EmbarkState
 {
     Idle,
+    Restocking,
     Pathing,
     Moving,
     AtNpc,

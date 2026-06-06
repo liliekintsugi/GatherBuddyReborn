@@ -97,6 +97,38 @@ public partial class Interface
                 embark.SelectStringBoardIndex = System.Math.Max(0, sel);
 
             ImGui.Separator();
+
+            // BaitRestock controls (PR 6).
+            var restock = embark.Restock;
+            var rEnabled = restock.Enabled;
+            if (ImGui.Checkbox("Enable bait auto-restock before embark", ref rEnabled))
+                restock.Enabled = rEnabled;
+
+            var listIdStr = restock.BuyListId?.ToString() ?? string.Empty;
+            if (ImGui.InputText("Vendor buy list id (Guid)", ref listIdStr, 64))
+            {
+                if (System.Guid.TryParse(listIdStr, out var g))
+                    restock.BuyListId = g;
+                else if (string.IsNullOrWhiteSpace(listIdStr))
+                    restock.BuyListId = null;
+            }
+
+            ImGui.TextDisabled("Build the bait list in Vulcan → Vendors, copy its id here.");
+            if (!string.IsNullOrEmpty(restock.LastStatus))
+                ImGui.TextUnformatted($"Last: {restock.LastStatus}");
+            if (restock.IsRunning)
+                ImGui.TextColored(new System.Numerics.Vector4(1f, 0.9f, 0.4f, 1f), $"Restock running: {restock.RunnerStatus}");
+
+            ImGui.TextUnformatted("Inventory snapshot:");
+            foreach (var (t, have) in restock.Snapshot())
+            {
+                var color = have < t.LowThreshold
+                    ? new System.Numerics.Vector4(1f, 0.5f, 0.4f, 1f)
+                    : new System.Numerics.Vector4(0.6f, 1f, 0.6f, 1f);
+                ImGui.TextColored(color, $"  {t.Name,-16} {have} / {t.RestockTarget}  (low<{t.LowThreshold})");
+            }
+
+            ImGui.Separator();
         }
 
         // Show the next ocean route per area, regardless of territory, as a debug helper.
