@@ -199,7 +199,7 @@ public partial class Interface
         if (ImGui.SliderInt("Retarget every (min)", ref retarget, 1, 30))
             lvling.RetargetEvery = System.TimeSpan.FromMinutes(retarget);
 
-        ImGui.TextUnformatted($"Current spot : {lvling.CurrentTargetSpot?.Name.English ?? "<none>"}");
+        ImGui.TextUnformatted($"Current spot : {lvling.CurrentTargetSpot?.Name ?? "<none>"}");
         if (lvling.CurrentTargetSpot != null)
             ImGui.TextUnformatted($"  Level={lvling.CurrentTargetSpot.GatheringLevel}, fish={lvling.CurrentTargetSpot.Items.Length}, territory={lvling.CurrentTargetSpot.Territory.Name}");
         ImGui.TextUnformatted($"Current list : {lvling.CurrentList?.Name ?? "<none>"}");
