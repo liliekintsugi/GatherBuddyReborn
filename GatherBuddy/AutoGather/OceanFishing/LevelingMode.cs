@@ -97,7 +97,7 @@ public sealed class LevelingMode
             return;
         try
         {
-            IPCSubscriber.AutoHook.SetPreset?.Invoke(AutoHookPreset);
+            AutoHook.SetPreset?.Invoke(AutoHookPreset);
             _savedAutoHookPreset = AutoHookPreset;
             GatherBuddy.Log.Information($"[Leveling] AutoHook preset → '{AutoHookPreset}'");
         }
