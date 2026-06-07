@@ -93,6 +93,31 @@ public partial class Interface
             if (ImGui.InputInt("Ferry Skipper data id", ref npcId))
                 embark.FerrySkipperDataId = (uint)System.Math.Max(0, npcId);
 
+            if (ImGui.Button("Dump nearby NPCs (≤ 8m) to log"))
+            {
+                var player = Dalamud.Objects.LocalPlayer;
+                if (player == null)
+                {
+                    GatherBuddy.Log.Warning("[Embark] no local player.");
+                }
+                else
+                {
+                    var nearby = Dalamud.Objects
+                        .Where(o => o.ObjectKind == Dalamud.Game.ClientState.Objects.Enums.ObjectKind.EventNpc
+                                 || o.ObjectKind == Dalamud.Game.ClientState.Objects.Enums.ObjectKind.BattleNpc)
+                        .Select(o => (Obj: o, Dist: System.Numerics.Vector3.Distance(o.Position, player.Position)))
+                        .Where(t => t.Dist <= 8f)
+                        .OrderBy(t => t.Dist)
+                        .Take(20)
+                        .ToList();
+                    GatherBuddy.Log.Information($"[Embark] {nearby.Count} NPC(s) within 8m of player @ {player.Position}:");
+                    foreach (var (o, d) in nearby)
+                        GatherBuddy.Log.Information($"  dist={d:F1}m  dataId={o.DataId}  name=\"{o.Name}\"  pos={o.Position}");
+                }
+            }
+            ImGui.SameLine();
+            ImGui.TextDisabled("Stand right next to the Ferry Skipper, click, then check /xllog.");
+
             var ferryTerritory = (int)embark.FerryTerritoryId;
             if (ImGui.InputInt("Ferry territory id", ref ferryTerritory))
                 embark.FerryTerritoryId = (ushort)System.Math.Clamp(ferryTerritory, 0, ushort.MaxValue);

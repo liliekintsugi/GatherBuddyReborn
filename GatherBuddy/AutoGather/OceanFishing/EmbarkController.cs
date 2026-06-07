@@ -235,17 +235,21 @@ public sealed class EmbarkController : IDisposable
 
     private unsafe void TickAtNpc()
     {
-        // Find the Ferry Skipper near our standing point.
-        var npc = Dalamud.Objects.FirstOrDefault(o =>
-            o.DataId == FerrySkipperDataId
-         && Vector3.Distance(o.Position, FerryStandPosition) < 10f);
+        // Find the Ferry Skipper by data id anywhere in the loaded scene — distance gating
+        // against FerryStandPosition just creates a second way to fail when the stand position
+        // is slightly off. Pathing already brought us close, and the NPC list is filtered by
+        // streaming range, so any match is the right one.
+        var npc = Dalamud.Objects.FirstOrDefault(o => o.DataId == FerrySkipperDataId);
 
         if (npc is null)
         {
-            LastError = $"Ferry Skipper (data id {FerrySkipperDataId}) not found near stand position.";
-            // Stay in this state briefly — the NPC may not have loaded yet.
+            LastError = $"Ferry Skipper (data id {FerrySkipperDataId}) not loaded. " +
+                        "Stand next to the real NPC and click 'Dump nearby NPCs' in the debug section to find the right data id.";
             if ((DateTime.UtcNow - _stateEnteredAt).TotalSeconds > 10)
+            {
+                _idleRetryAfter = DateTime.UtcNow.AddSeconds(5);
                 Transition(EmbarkState.Idle);
+            }
             return;
         }
 
