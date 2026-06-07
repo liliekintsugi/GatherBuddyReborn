@@ -14,12 +14,14 @@ namespace GatherBuddy.AutoGather.OceanFishing;
 // baits, an inventory probe, and a trigger that starts the user's chosen buy list if any required
 // bait is below threshold. EmbarkController gates on this completing before Pathing.
 //
-// Ocean fishing bait item ids (verified from Lumina dumps):
-//   29714 Versatile Lure
-//    2603 Plump Worm
-//    2587 Ragworm
-//   27590 Krill
-//   29715 Stonefly Nymph
+// Ocean fishing bait item ids (verified via XIVAPI v2 on 2026-06-07):
+//   29714 Ragworm
+//   29715 Krill
+//   29716 Plump Worm
+//   29717 Versatile Lure
+//   12704 Stonefly Nymph
+// The original numbers in this file (27590, 2603, 2587, 29714, 29715) were a complete misread —
+// they pointed at unrelated items, so the inventory probe always reported 0 for every bait.
 public sealed class BaitRestock
 {
     public sealed record BaitTarget(uint ItemId, string Name, int LowThreshold, int RestockTarget);
@@ -33,11 +35,11 @@ public sealed class BaitRestock
 
     public List<BaitTarget> Targets { get; } = new()
     {
-        new(27590, "Krill",          200, 999),
-        new(2603,  "Plump Worm",     200, 999),
-        new(2587,  "Ragworm",        200, 999),
-        new(29714, "Versatile Lure",  50, 199),
-        new(29715, "Stonefly Nymph", 100, 499),
+        new(29715, "Krill",          200, 999),
+        new(29716, "Plump Worm",     200, 999),
+        new(29714, "Ragworm",        200, 999),
+        new(29717, "Versatile Lure",  50, 199),
+        new(12704, "Stonefly Nymph", 100, 499),
     };
 
     public string LastStatus { get; private set; } = string.Empty;

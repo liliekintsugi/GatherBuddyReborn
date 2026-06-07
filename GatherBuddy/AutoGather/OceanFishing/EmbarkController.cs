@@ -38,8 +38,14 @@ public sealed class EmbarkController : IDisposable
 
     public BaitRestock Restock { get; } = new();
 
-    // Start walking when next departure is within this many minutes.
-    public int LeadTimeMinutes { get; set; } = 3;
+    // Start walking when next departure is within this many minutes. In-game boarding window
+    // opens ~15 min before each 2h slot, so 15 is a safe default — we'll already be at the NPC
+    // when the boat arrives.
+    public int LeadTimeMinutes { get; set; } = 15;
+
+    // Public read for the UI / debug overlay.
+    public long MsUntilNextDeparture
+        => GatherBuddy.Plugin.OceanUptime.MillisecondsUntilNextDeparture(GatherBuddy.Time.ServerTime);
 
     public EmbarkState State { get; private set; } = EmbarkState.Idle;
     public string?     LastError { get; private set; }
@@ -96,6 +102,16 @@ public sealed class EmbarkController : IDisposable
 
         if (Dalamud.ClientState.TerritoryType != FerryTerritoryId)
             return;
+
+        // Time-gate: wait until next departure is inside LeadTimeMinutes. Keeps us from walking
+        // to the NPC 90 minutes early and getting stuck on a closed boarding menu.
+        var msUntil = MsUntilNextDeparture;
+        if (msUntil > LeadTimeMinutes * 60_000L)
+        {
+            // Re-check every minute or so; no need to evaluate every frame.
+            _idleRetryAfter = DateTime.UtcNow.AddSeconds(30);
+            return;
+        }
 
         if (!VNavmesh.Enabled)
         {

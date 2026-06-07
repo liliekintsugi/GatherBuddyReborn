@@ -17,6 +17,16 @@ public static class OceanUptime
 
     public static readonly long LoopDurationMilliseconds = GatherBuddy.GameData.OceanTimeline.Count * TripDurationMilliseconds;
 
+    // Returns ms until the next ocean-fishing departure (every TripDurationMilliseconds in real
+    // time). If a slot is starting *right now*, returns 0. Boarding window is open for ~15 min
+    // before each departure.
+    public static long MillisecondsUntilNextDeparture(TimeStamp utcNow)
+    {
+        var loopOffset = (utcNow.Time - LoopTimestampEpoch) % LoopDurationMilliseconds;
+        var remainder  = loopOffset % TripDurationMilliseconds;
+        return remainder == 0 ? 0 : TripDurationMilliseconds - remainder;
+    }
+
     // Return the next ocean route for an area.
     public static OceanRoute NextOceanRoute(OceanArea area, TimeStamp utcNow)
     {

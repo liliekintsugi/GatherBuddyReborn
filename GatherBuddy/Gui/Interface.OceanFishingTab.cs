@@ -82,8 +82,19 @@ public partial class Interface
                 embark.Enabled = embEnabled;
 
             ImGui.TextUnformatted($"Embark state : {embark.State}");
+            var msUntil = embark.MsUntilNextDeparture;
+            var ts = System.TimeSpan.FromMilliseconds(msUntil);
+            var inWindow = msUntil <= embark.LeadTimeMinutes * 60_000L;
+            ImGui.TextColored(
+                inWindow ? new System.Numerics.Vector4(0.6f, 1f, 0.6f, 1f)
+                         : new System.Numerics.Vector4(0.8f, 0.8f, 0.8f, 1f),
+                $"Next departure : {ts:hh\\:mm\\:ss}  (boarding window: {embark.LeadTimeMinutes} min)");
             if (!string.IsNullOrEmpty(embark.LastError))
                 ImGui.TextColored(new System.Numerics.Vector4(1f, 0.5f, 0.4f, 1f), $"Last error: {embark.LastError}");
+
+            var lead = embark.LeadTimeMinutes;
+            if (ImGui.SliderInt("Lead time (min before departure)", ref lead, 1, 30))
+                embark.LeadTimeMinutes = lead;
 
             var pos = embark.FerryStandPosition;
             if (ImGui.InputFloat3("Ferry stand position", ref pos))
