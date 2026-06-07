@@ -26,12 +26,12 @@ public sealed class EmbarkController : IDisposable
     // Territory where the Ferry Skipper stands (Limsa Lominsa Lower Decks).
     public ushort FerryTerritoryId { get; set; } = 129;
 
-    // Default ferry coordinates — verified once on a live character, then user-overridable.
-    public Vector3 FerryStandPosition { get; set; } = new(-129.7f, 18.0f, 39.9f);
+    // Default ferry coordinates — confirmed live on 2026-06-07 (Dryskthota / Skipper du ferry,
+    // Limsa Lominsa Lower Decks, pier near Fisher's Guild). User-overridable from the UI.
+    public Vector3 FerryStandPosition { get; set; } = new(-409.9f, 4.0f, 76.0f);
 
-    // Ferry Skipper data id ("dataId" matches GameObject.DataId). Default sourced from community
-    // tooling; if it ever changes the user can edit it from the UI.
-    public uint FerrySkipperDataId { get; set; } = 1027847;
+    // Ferry Skipper data id ("dataId" matches GameObject.DataId). Confirmed live 2026-06-07.
+    public uint FerrySkipperDataId { get; set; } = 1005421;
 
     // Index into the SelectString menu that boards the next voyage. Game-version dependent; usually 0.
     public int SelectStringBoardIndex { get; set; } = 0;
