@@ -45,6 +45,8 @@ public sealed class EmbarkController : IDisposable
     public string?     LastError { get; private set; }
 
     private DateTime _stateEnteredAt = DateTime.UtcNow;
+    private DateTime _idleRetryAfter = DateTime.MinValue;
+    private string?  _lastLoggedRestockStatus;
     private Task<System.Collections.Generic.List<Vector3>>? _pathTask;
 
     public void Tick()
@@ -88,15 +90,17 @@ public sealed class EmbarkController : IDisposable
 
     private void TickIdle()
     {
-        // PR 4 keeps scheduling manual: user toggles Enabled when they're standing in the ferry
-        // territory and ready to be walked to the NPC. PR 6 will time-gate this against
-        // OceanUptime so the toggle can mean "embark on the next available trip" instead.
+        // Cooldown after any failure so we don't spam pathfind / restock at framerate.
+        if (DateTime.UtcNow < _idleRetryAfter)
+            return;
+
         if (Dalamud.ClientState.TerritoryType != FerryTerritoryId)
             return;
 
         if (!VNavmesh.Enabled)
         {
             LastError = "vnavmesh not loaded";
+            _idleRetryAfter = DateTime.UtcNow.AddSeconds(5);
             return;
         }
 
@@ -108,26 +112,53 @@ public sealed class EmbarkController : IDisposable
         if (Restock.Enabled && Restock.AnyMissing())
         {
             var r = Restock.TryStart();
-            GatherBuddy.Log.Information($"[Embark] Restock pre-check → {r} ({Restock.LastStatus})");
+            var status = $"{r} ({Restock.LastStatus})";
+            if (status != _lastLoggedRestockStatus)
+            {
+                GatherBuddy.Log.Information($"[Embark] Restock pre-check → {status}");
+                _lastLoggedRestockStatus = status;
+            }
             if (r == BaitRestock.RestockResult.Started || r == BaitRestock.RestockResult.AlreadyRunning)
             {
                 Transition(EmbarkState.Restocking);
                 return;
             }
-            // NotConfigured / Failed — fall through and let the user fix it; do not block embark.
+            if (r == BaitRestock.RestockResult.NotConfigured || r == BaitRestock.RestockResult.Failed)
+            {
+                // No point retrying every frame — cool off and let the user fix config.
+                LastError = $"restock {r}: {Restock.LastStatus}";
+                _idleRetryAfter = DateTime.UtcNow.AddSeconds(10);
+                return;
+            }
         }
 
-        _pathTask = VNavmesh.Nav.Pathfind(player.Position, ResolveDestination(), false);
+        var dest = ResolveDestination();
+        if (dest is null)
+        {
+            LastError = "no on-mesh destination near Ferry Skipper (NPC out of stream range; configured coords off-mesh)";
+            _idleRetryAfter = DateTime.UtcNow.AddSeconds(5);
+            return;
+        }
+
+        _pathTask = VNavmesh.Nav.Pathfind(player.Position, dest.Value, false);
         Transition(EmbarkState.Pathing);
     }
 
     // Prefer the live NPC position over the static config — the configured value is a fallback
     // for when the Skipper hasn't streamed in yet, but if he's loaded, his actual position is
     // always on-mesh and always correct (the static value may drift or be off-mesh).
-    private Vector3 ResolveDestination()
+    //
+    // If we have to fall back to the static value (NPC out of range), snap it to the nearest
+    // on-mesh point via vnavmesh — otherwise Pathfind returns no waypoints and the user gets
+    // stuck retrying. Returns null if no on-mesh point can be found within a generous box.
+    private Vector3? ResolveDestination()
     {
         var npc = Dalamud.Objects.FirstOrDefault(o => o.DataId == FerrySkipperDataId);
-        return npc?.Position ?? FerryStandPosition;
+        if (npc != null)
+            return npc.Position;
+
+        var snapped = VNavmesh.Query.Mesh.NearestPoint?.Invoke(FerryStandPosition, 20f, 20f);
+        return snapped;
     }
 
     private void TickRestocking()
@@ -143,7 +174,15 @@ public sealed class EmbarkController : IDisposable
             Transition(EmbarkState.Idle);
             return;
         }
-        _pathTask = VNavmesh.Nav.Pathfind(player.Position, ResolveDestination(), false);
+        var dest2 = ResolveDestination();
+        if (dest2 is null)
+        {
+            LastError = "no on-mesh destination after restock";
+            _idleRetryAfter = DateTime.UtcNow.AddSeconds(5);
+            Transition(EmbarkState.Idle);
+            return;
+        }
+        _pathTask = VNavmesh.Nav.Pathfind(player.Position, dest2.Value, false);
         Transition(EmbarkState.Pathing);
     }
 
@@ -160,6 +199,7 @@ public sealed class EmbarkController : IDisposable
         if (_pathTask.IsFaulted)
         {
             LastError = $"pathfind faulted: {_pathTask.Exception?.GetBaseException().Message}";
+            _idleRetryAfter = DateTime.UtcNow.AddSeconds(5);
             Transition(EmbarkState.Idle);
             return;
         }
@@ -167,7 +207,8 @@ public sealed class EmbarkController : IDisposable
         var waypoints = _pathTask.Result;
         if (waypoints is null || waypoints.Count == 0)
         {
-            LastError = "pathfind returned no waypoints";
+            LastError = "pathfind returned no waypoints (destination off-mesh? try editing Ferry stand position to the live NPC location)";
+            _idleRetryAfter = DateTime.UtcNow.AddSeconds(5);
             Transition(EmbarkState.Idle);
             return;
         }
