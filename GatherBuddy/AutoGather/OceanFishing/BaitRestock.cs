@@ -26,12 +26,20 @@ public sealed class BaitRestock
 {
     public sealed record BaitTarget(uint ItemId, string Name, int LowThreshold, int RestockTarget);
 
-    public bool Enabled { get; set; } = false;
+    private static Config.OceanFishingConfig Cfg => GatherBuddy.Config.OceanFishing;
+    private static void Save() => GatherBuddy.Config.Save();
 
-    // If set, BaitRestock will trigger VendorBuyListManager.Start(BuyListId) on demand. The user is
-    // expected to have configured that list with the right NPC / shop / quantities — we don't try
-    // to construct it for them in PR 6.
-    public Guid? BuyListId { get; set; }
+    public bool Enabled
+    {
+        get => Cfg.RestockEnabled;
+        set { if (Cfg.RestockEnabled == value) return; Cfg.RestockEnabled = value; Save(); }
+    }
+
+    public Guid? BuyListId
+    {
+        get => Cfg.RestockBuyListId;
+        set { if (Cfg.RestockBuyListId == value) return; Cfg.RestockBuyListId = value; Save(); }
+    }
 
     public List<BaitTarget> Targets { get; } = new()
     {

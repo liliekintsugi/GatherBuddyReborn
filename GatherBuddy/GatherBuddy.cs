@@ -78,6 +78,7 @@ public partial class GatherBuddy : IDalamudPlugin
     public static AutoGather.OceanFishing.EmbarkController EmbarkController { get; private set; } = null!;
     public static AutoGather.OceanFishing.BaitGuard        BaitGuard        { get; private set; } = null!;
     public static AutoGather.OceanFishing.LevelingMode     LevelingMode     { get; private set; } = null!;
+    public static AutoGather.OceanFishing.OnBoardNavigator OnBoardNavigator { get; private set; } = null!;
     public static AutoHookIntegration.BiteTimerService BiteTimerService { get; private set; } = null!;
     public static AutoGather.Collectables.CollectableManager CollectableManager { get; private set; } = null!;
     public static Crafting.CraftingListManager CraftingListManager { get; private set; } = null!;
@@ -191,6 +192,7 @@ public partial class GatherBuddy : IDalamudPlugin
             EmbarkController = new AutoGather.OceanFishing.EmbarkController();
             BaitGuard        = new AutoGather.OceanFishing.BaitGuard();
             LevelingMode     = new AutoGather.OceanFishing.LevelingMode();
+            OnBoardNavigator = new AutoGather.OceanFishing.OnBoardNavigator();
             CollectableManager = new AutoGather.Collectables.CollectableManager(Dalamud.Framework, Dalamud.Conditions, Config);
             global::GatherBuddy.AutoGather.Collectables.CollectableInventoryHelper.InitializeAsync();
             CraftingGatherBridge.BindCollectableManager(CollectableManager);
@@ -357,6 +359,7 @@ public partial class GatherBuddy : IDalamudPlugin
             EmbarkController?.Tick();
             BaitGuard?.Tick();
             LevelingMode?.Tick();
+            OnBoardNavigator?.Tick();
         }
         catch (Exception e)
         {

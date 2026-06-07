@@ -21,27 +21,46 @@ namespace GatherBuddy.AutoGather.OceanFishing;
 // overridable from the UI so the user can recover from data drift without a rebuild.
 public sealed class EmbarkController : IDisposable
 {
-    public bool Enabled { get; set; } = false;
+    private static Config.OceanFishingConfig Cfg => GatherBuddy.Config.OceanFishing;
+    private static void Save() => GatherBuddy.Config.Save();
 
-    // Territory where the Ferry Skipper stands (Limsa Lominsa Lower Decks).
-    public ushort FerryTerritoryId { get; set; } = 129;
+    public bool Enabled
+    {
+        get => Cfg.EmbarkEnabled;
+        set { if (Cfg.EmbarkEnabled == value) return; Cfg.EmbarkEnabled = value; Save(); }
+    }
 
-    // Default ferry coordinates — confirmed live on 2026-06-07 (Dryskthota / Skipper du ferry,
-    // Limsa Lominsa Lower Decks, pier near Fisher's Guild). User-overridable from the UI.
-    public Vector3 FerryStandPosition { get; set; } = new(-409.9f, 4.0f, 76.0f);
+    public ushort FerryTerritoryId
+    {
+        get => Cfg.FerryTerritoryId;
+        set { if (Cfg.FerryTerritoryId == value) return; Cfg.FerryTerritoryId = value; Save(); }
+    }
 
-    // Ferry Skipper data id ("dataId" matches GameObject.DataId). Confirmed live 2026-06-07.
-    public uint FerrySkipperDataId { get; set; } = 1005421;
+    public Vector3 FerryStandPosition
+    {
+        get => Cfg.FerryStandPosition;
+        set { if (Cfg.FerryStandPosition == value) return; Cfg.FerryStandPosition = value; Save(); }
+    }
 
-    // Index into the SelectString menu that boards the next voyage. Game-version dependent; usually 0.
-    public int SelectStringBoardIndex { get; set; } = 0;
+    public uint FerrySkipperDataId
+    {
+        get => Cfg.FerrySkipperDataId;
+        set { if (Cfg.FerrySkipperDataId == value) return; Cfg.FerrySkipperDataId = value; Save(); }
+    }
+
+    public int SelectStringBoardIndex
+    {
+        get => Cfg.SelectStringBoardIndex;
+        set { if (Cfg.SelectStringBoardIndex == value) return; Cfg.SelectStringBoardIndex = value; Save(); }
+    }
 
     public BaitRestock Restock { get; } = new();
 
-    // Start walking when next departure is within this many minutes. In-game boarding window
-    // opens ~15 min before each 2h slot, so 15 is a safe default — we'll already be at the NPC
-    // when the boat arrives.
-    public int LeadTimeMinutes { get; set; } = 15;
+    public int LeadTimeMinutes
+    {
+        get => Cfg.LeadTimeMinutes;
+        set { if (Cfg.LeadTimeMinutes == value) return; Cfg.LeadTimeMinutes = value; Save(); }
+    }
 
     // Public read for the UI / debug overlay.
     public long MsUntilNextDeparture

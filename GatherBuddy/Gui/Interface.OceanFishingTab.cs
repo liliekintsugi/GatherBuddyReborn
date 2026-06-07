@@ -192,6 +192,9 @@ public partial class Interface
         // Leveling mode (PR 8) — auto-fish at nearest-level hole between ocean trips.
         DrawLevelingModeSection();
 
+        // On-board navigator (PR 9b) — once on the boat, walk to a fishing hole and cast.
+        DrawOnBoardNavigatorSection();
+
         // Show the next ocean route per area, regardless of territory, as a debug helper.
         var now = GatherBuddy.Time.ServerTime;
         try
@@ -260,6 +263,37 @@ public partial class Interface
 
         if (ImGui.Button("Force retarget now"))
             lvling.Retarget();
+    }
+
+    private static void DrawOnBoardNavigatorSection()
+    {
+        var nav = GatherBuddy.OnBoardNavigator;
+        if (nav == null) return;
+        if (!ImGui.CollapsingHeader("On-board navigator (auto-walk to fishing hole + cast)"))
+            return;
+
+        var en = nav.Enabled;
+        if (ImGui.Checkbox("Enable##onboard", ref en))
+            nav.Enabled = en;
+
+        var pos = nav.FishingSpot;
+        if (ImGui.InputFloat3("Fishing-hole position", ref pos))
+            nav.FishingSpot = pos;
+        ImGui.SameLine();
+        if (ImGui.Button("Capture current pos"))
+            nav.CaptureCurrentPosition();
+        ImGui.TextDisabled("On the boat: walk to a rail, click 'Capture current pos'. Plugin will return here every trip.");
+
+        var settle = nav.SettleDelaySeconds;
+        if (ImGui.SliderInt("Settle delay after boarding (s)", ref settle, 1, 15))
+            nav.SettleDelaySeconds = settle;
+
+        var cast = nav.AutoCast;
+        if (ImGui.Checkbox("Auto-trigger Cast action after arriving", ref cast))
+            nav.AutoCast = cast;
+
+        if (!string.IsNullOrEmpty(nav.LastStatus))
+            ImGui.TextUnformatted($"Last: {nav.LastStatus}");
     }
 
     private static void DrawBaitGuardSection()

@@ -69,6 +69,7 @@ public partial class Configuration : IPluginConfiguration
 
     // AutoGather Config
     public AutoGatherConfig AutoGatherConfig              { get; set; } = new();
+    public OceanFishingConfig OceanFishing                { get; set; } = new();
     public float            AutoGatherListSelectorWidth { get; set; } = 225f;
 
     // Collectable Config

@@ -14,10 +14,20 @@ namespace GatherBuddy.AutoGather.OceanFishing;
 // No embarkation, no NPC interaction, no movement — that lands in PR 4.
 public sealed class AutoOceanFishing : IDisposable
 {
-    public bool Enabled { get; set; } = false;
+    private static Config.OceanFishingConfig Cfg => GatherBuddy.Config.OceanFishing;
+    private static void Save() => GatherBuddy.Config.Save();
 
-    // Defaulted via config in a later PR. PR 3 keeps it inline.
-    public OceanArea PreferredArea { get; set; } = OceanArea.Aldenard;
+    public bool Enabled
+    {
+        get => Cfg.AutoOceanEnabled;
+        set { if (Cfg.AutoOceanEnabled == value) return; Cfg.AutoOceanEnabled = value; Save(); }
+    }
+
+    public OceanArea PreferredArea
+    {
+        get => (OceanArea)Cfg.PreferredOceanArea;
+        set { var b = (byte)value; if (Cfg.PreferredOceanArea == b) return; Cfg.PreferredOceanArea = b; Save(); }
+    }
 
     public OceanRoute? CurrentRoute    { get; private set; }
     public int         CurrentSegment  { get; private set; } = -1;
@@ -27,7 +37,11 @@ public sealed class AutoOceanFishing : IDisposable
     // PR 7c — auto-toggle AutoHook on the boat so the player doesn't have to enable it manually.
     // We save the prior state on trip enter and restore it on trip exit so we don't surprise the
     // user when they leave.
-    public bool ManageAutoHookState { get; set; } = true;
+    public bool ManageAutoHookState
+    {
+        get => Cfg.AutoOceanManageAutoHookState;
+        set { if (Cfg.AutoOceanManageAutoHookState == value) return; Cfg.AutoOceanManageAutoHookState = value; Save(); }
+    }
     private bool? _savedPluginState;
     private bool? _savedAutoStart;
 

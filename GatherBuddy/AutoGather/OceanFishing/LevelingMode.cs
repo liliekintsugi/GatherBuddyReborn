@@ -24,22 +24,40 @@ public sealed class LevelingMode
 {
     public const string ListNamePrefix = "GBR Leveling Lv";
 
-    public bool Enabled { get; set; } = false;
+    private static Config.OceanFishingConfig Cfg => GatherBuddy.Config.OceanFishing;
+    private static void Save() => GatherBuddy.Config.Save();
 
-    // Window relative to player level: include spots with GatheringLevel ∈ [playerLvl + LevelMin, playerLvl + LevelMax].
-    public int LevelMin { get; set; } = -3;
-    public int LevelMax { get; set; } = 2;
+    public bool Enabled
+    {
+        get => Cfg.LevelingEnabled;
+        set { if (Cfg.LevelingEnabled == value) return; Cfg.LevelingEnabled = value; Save(); }
+    }
 
-    // Quantity per fish in the generated list. Capped under uint.MaxValue; the list is meant to run
-    // indefinitely so a large number works fine.
+    public int LevelMin
+    {
+        get => Cfg.LevelingLevelMin;
+        set { if (Cfg.LevelingLevelMin == value) return; Cfg.LevelingLevelMin = value; Save(); }
+    }
+
+    public int LevelMax
+    {
+        get => Cfg.LevelingLevelMax;
+        set { if (Cfg.LevelingLevelMax == value) return; Cfg.LevelingLevelMax = value; Save(); }
+    }
+
     public uint QuantityPerFish { get; set; } = 9999;
 
-    // How often we re-pick the target spot. Avoids thrashing if the player levels mid-session.
-    public TimeSpan RetargetEvery { get; set; } = TimeSpan.FromMinutes(5);
+    public TimeSpan RetargetEvery
+    {
+        get => TimeSpan.FromMinutes(Cfg.LevelingRetargetEveryMin);
+        set { var m = (int)value.TotalMinutes; if (Cfg.LevelingRetargetEveryMin == m) return; Cfg.LevelingRetargetEveryMin = m; Save(); }
+    }
 
-    // Optional AutoHook preset name to select while leveling — typically a "catch everything,
-    // hook on any bite" preset. When empty, we don't touch the user's current preset.
-    public string AutoHookPreset { get; set; } = string.Empty;
+    public string AutoHookPreset
+    {
+        get => Cfg.LevelingAutoHookPreset;
+        set { if (Cfg.LevelingAutoHookPreset == value) return; Cfg.LevelingAutoHookPreset = value; Save(); }
+    }
 
     private string? _savedAutoHookPreset;
 

@@ -15,15 +15,26 @@ namespace GatherBuddy.AutoGather.OceanFishing;
 // The user keeps full control via Enabled / interval / threshold.
 public sealed class BaitGuard
 {
-    public bool Enabled { get; set; } = false;
+    private static Config.OceanFishingConfig Cfg => GatherBuddy.Config.OceanFishing;
+    private static void Save() => GatherBuddy.Config.Save();
 
-    // Trigger only if AutoGather is currently running (Enabled). If false, we run the check whenever
-    // the plugin is loaded.
-    public bool OnlyWhenAutoGatherEnabled { get; set; } = true;
+    public bool Enabled
+    {
+        get => Cfg.BaitGuardEnabled;
+        set { if (Cfg.BaitGuardEnabled == value) return; Cfg.BaitGuardEnabled = value; Save(); }
+    }
 
-    // Only consider baits whose count is below this fraction of the desired quantity (0..1).
-    // Default 0.5 = "if I've burned through half, restock". Avoids constant noise.
-    public float TriggerBelowFraction { get; set; } = 0.5f;
+    public bool OnlyWhenAutoGatherEnabled
+    {
+        get => Cfg.BaitGuardOnlyWhenAutoGather;
+        set { if (Cfg.BaitGuardOnlyWhenAutoGather == value) return; Cfg.BaitGuardOnlyWhenAutoGather = value; Save(); }
+    }
+
+    public float TriggerBelowFraction
+    {
+        get => Cfg.BaitGuardTriggerBelowFraction;
+        set { if (Math.Abs(Cfg.BaitGuardTriggerBelowFraction - value) < 0.0001f) return; Cfg.BaitGuardTriggerBelowFraction = value; Save(); }
+    }
 
     public int DesiredQtyPerFish { get; set; } = BaitAdvisor.DefaultDesiredQtyPerFish;
 
