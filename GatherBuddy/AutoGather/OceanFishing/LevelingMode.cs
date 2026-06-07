@@ -132,7 +132,14 @@ public sealed class LevelingMode
             Enabled     = true,
         };
         foreach (var fish in spot.Items)
+        {
             list.Add(fish, QuantityPerFish);
+            // Without this, AutoGather is free to pick any spot that contains the fish — usually
+            // the closest one to the player, which is rarely our intended target spot. Pin every
+            // entry to the spot we just chose so the displayed name and the actual destination
+            // stay consistent.
+            list.SetPreferredLocation(fish, spot);
+        }
 
         mgr.AddList(list);
         CurrentList       = list;
