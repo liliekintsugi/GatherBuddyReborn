@@ -99,6 +99,33 @@ jobs:
           $json | ConvertTo-Json -Depth 8 | Set-Content .\build\GatherBuddyReborn.json -Encoding UTF8
           Copy-Item .\build\GatherBuddyReborn.json .\GatherBuddyReborn.manifest.json -Force
 
+      - name: Update repo.json on branch
+        shell: pwsh
+        run: |
+          $version = "${{ steps.ver.outputs.assembly }}"
+          $repoPath = "repo.json"
+          $repo = Get-Content $repoPath -Raw | ConvertFrom-Json
+          foreach ($entry in $repo) {
+            if ($entry.InternalName -eq "GatherBuddyReborn") {
+              $entry.AssemblyVersion = $version
+              $entry.TestingAssemblyVersion = $version
+            }
+          }
+          $repo | ConvertTo-Json -Depth 8 | Set-Content $repoPath -Encoding UTF8
+
+      - name: Commit repo.json bump
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet repo.json; then
+            echo "repo.json unchanged, skipping commit"
+          else
+            git add repo.json
+            git commit -m "chore(repo.json): bump AssemblyVersion to ${{ steps.ver.outputs.assembly }} [skip ci]"
+            git push origin HEAD:${{ github.ref_name }}
+          fi
+
       - name: Publish prerelease
         uses: softprops/action-gh-release@v2
         with:
