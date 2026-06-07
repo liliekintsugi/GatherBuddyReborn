@@ -111,7 +111,8 @@ jobs:
               $entry.TestingAssemblyVersion = $version
             }
           }
-          $repo | ConvertTo-Json -Depth 8 | Set-Content $repoPath -Encoding UTF8
+          # -AsArray (PS7+) preserves the top-level JSON array even with a single element
+          ConvertTo-Json -InputObject $repo -Depth 8 -AsArray | Set-Content $repoPath -Encoding UTF8
 
       - name: Commit repo.json bump
         shell: bash
