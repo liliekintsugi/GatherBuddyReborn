@@ -103,8 +103,8 @@ public partial class Interface
                 else
                 {
                     var nearby = Dalamud.Objects
-                        .Where(o => o.ObjectKind == Dalamud.Game.ClientState.Objects.Enums.ObjectKind.EventNpc
-                                 || o.ObjectKind == Dalamud.Game.ClientState.Objects.Enums.ObjectKind.BattleNpc)
+                        .Where(o => o.ObjectKind == global::Dalamud.Game.ClientState.Objects.Enums.ObjectKind.EventNpc
+                                 || o.ObjectKind == global::Dalamud.Game.ClientState.Objects.Enums.ObjectKind.BattleNpc)
                         .Select(o => (Obj: o, Dist: System.Numerics.Vector3.Distance(o.Position, player.Position)))
                         .Where(t => t.Dist <= 8f)
                         .OrderBy(t => t.Dist)
