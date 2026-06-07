@@ -37,6 +37,12 @@ public sealed class LevelingMode
     // How often we re-pick the target spot. Avoids thrashing if the player levels mid-session.
     public TimeSpan RetargetEvery { get; set; } = TimeSpan.FromMinutes(5);
 
+    // Optional AutoHook preset name to select while leveling — typically a "catch everything,
+    // hook on any bite" preset. When empty, we don't touch the user's current preset.
+    public string AutoHookPreset { get; set; } = string.Empty;
+
+    private string? _savedAutoHookPreset;
+
     public FishingSpot? CurrentTargetSpot { get; private set; }
     public AutoGatherList? CurrentList     { get; private set; }
     public string LastStatus               { get; private set; } = string.Empty;
@@ -78,7 +84,26 @@ public sealed class LevelingMode
                 CurrentList.Enabled = true;
                 mgr.SetActiveItems();
                 LastStatus = $"Resumed list '{CurrentList.Name}'.";
+                TrySelectAutoHookPreset();
             }
+        }
+    }
+
+    private void TrySelectAutoHookPreset()
+    {
+        if (string.IsNullOrWhiteSpace(AutoHookPreset))
+            return;
+        if (_savedAutoHookPreset == AutoHookPreset)
+            return;
+        try
+        {
+            IPCSubscriber.AutoHook.SetPreset?.Invoke(AutoHookPreset);
+            _savedAutoHookPreset = AutoHookPreset;
+            GatherBuddy.Log.Information($"[Leveling] AutoHook preset → '{AutoHookPreset}'");
+        }
+        catch (Exception e)
+        {
+            GatherBuddy.Log.Warning($"[Leveling] couldn't set AutoHook preset '{AutoHookPreset}': {e.Message}");
         }
     }
 

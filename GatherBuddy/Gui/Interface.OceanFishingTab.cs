@@ -246,6 +246,11 @@ public partial class Interface
         if (ImGui.SliderInt("Retarget every (min)", ref retarget, 1, 30))
             lvling.RetargetEvery = System.TimeSpan.FromMinutes(retarget);
 
+        var preset = lvling.AutoHookPreset;
+        if (ImGui.InputText("AutoHook preset (catch-all recommended)", ref preset, 64))
+            lvling.AutoHookPreset = preset;
+        ImGui.TextDisabled("Create a permissive preset in AutoHook (no fish filter, hook any bite), paste its name here. Empty = don't touch AutoHook.");
+
         ImGui.TextUnformatted($"Current spot : {lvling.CurrentTargetSpot?.Name ?? "<none>"}");
         if (lvling.CurrentTargetSpot != null)
             ImGui.TextUnformatted($"  Level={lvling.CurrentTargetSpot.GatheringLevel}, fish={lvling.CurrentTargetSpot.Items.Length}, territory={lvling.CurrentTargetSpot.Territory.Name}");
