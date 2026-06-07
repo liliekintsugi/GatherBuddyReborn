@@ -178,7 +178,7 @@ public partial class Interface
             return;
 
         var enabled = lvling.Enabled;
-        if (ImGui.Checkbox("Enable", ref enabled))
+        if (ImGui.Checkbox("Enable##leveling", ref enabled))
         {
             lvling.Enabled = enabled;
             if (!enabled)
@@ -218,7 +218,7 @@ public partial class Interface
             return;
 
         var enabled = guard.Enabled;
-        if (ImGui.Checkbox("Enable", ref enabled))
+        if (ImGui.Checkbox("Enable##baitguard", ref enabled))
             guard.Enabled = enabled;
 
         var only = guard.OnlyWhenAutoGatherEnabled;

@@ -117,8 +117,17 @@ public sealed class EmbarkController : IDisposable
             // NotConfigured / Failed — fall through and let the user fix it; do not block embark.
         }
 
-        _pathTask = VNavmesh.Nav.Pathfind(player.Position, FerryStandPosition, false);
+        _pathTask = VNavmesh.Nav.Pathfind(player.Position, ResolveDestination(), false);
         Transition(EmbarkState.Pathing);
+    }
+
+    // Prefer the live NPC position over the static config — the configured value is a fallback
+    // for when the Skipper hasn't streamed in yet, but if he's loaded, his actual position is
+    // always on-mesh and always correct (the static value may drift or be off-mesh).
+    private Vector3 ResolveDestination()
+    {
+        var npc = Dalamud.Objects.FirstOrDefault(o => o.DataId == FerrySkipperDataId);
+        return npc?.Position ?? FerryStandPosition;
     }
 
     private void TickRestocking()
@@ -134,7 +143,7 @@ public sealed class EmbarkController : IDisposable
             Transition(EmbarkState.Idle);
             return;
         }
-        _pathTask = VNavmesh.Nav.Pathfind(player.Position, FerryStandPosition, false);
+        _pathTask = VNavmesh.Nav.Pathfind(player.Position, ResolveDestination(), false);
         Transition(EmbarkState.Pathing);
     }
 
