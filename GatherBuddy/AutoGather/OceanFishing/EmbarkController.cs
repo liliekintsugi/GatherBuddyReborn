@@ -45,7 +45,7 @@ public sealed class EmbarkController : IDisposable
 
     // Public read for the UI / debug overlay.
     public long MsUntilNextDeparture
-        => GatherBuddy.Plugin.OceanUptime.MillisecondsUntilNextDeparture(GatherBuddy.Time.ServerTime);
+        => global::GatherBuddy.Plugin.OceanUptime.MillisecondsUntilNextDeparture(GatherBuddy.Time.ServerTime);
 
     public EmbarkState State { get; private set; } = EmbarkState.Idle;
     public string?     LastError { get; private set; }
