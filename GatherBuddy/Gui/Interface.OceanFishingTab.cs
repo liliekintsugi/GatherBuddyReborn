@@ -109,16 +109,27 @@ public partial class Interface
             if (ImGui.Checkbox("Enable bait auto-restock before embark", ref rEnabled))
                 restock.Enabled = rEnabled;
 
-            var listIdStr = restock.BuyListId?.ToString() ?? string.Empty;
-            if (ImGui.InputText("Vendor buy list id (Guid)", ref listIdStr, 64))
+            // Dropdown of all Vulcan buy lists — pick by name, store the Guid.
+            var lists = GatherBuddy.VendorBuyListManager?.Lists?.OrderBy(l => l.Name).ToList()
+                        ?? new System.Collections.Generic.List<Vulcan.Vendors.VendorBuyListDefinition>();
+            var current = lists.FirstOrDefault(l => l.Id == restock.BuyListId);
+            var preview = current?.Name ?? (restock.BuyListId.HasValue ? "<unknown id>" : "<none>");
+            if (ImGui.BeginCombo("Vendor buy list", preview))
             {
-                if (System.Guid.TryParse(listIdStr, out var g))
-                    restock.BuyListId = g;
-                else if (string.IsNullOrWhiteSpace(listIdStr))
+                if (ImGui.Selectable("<none>", restock.BuyListId == null))
                     restock.BuyListId = null;
+                foreach (var l in lists)
+                {
+                    var selected = l.Id == restock.BuyListId;
+                    if (ImGui.Selectable($"{l.Name}##{l.Id}", selected))
+                        restock.BuyListId = l.Id;
+                    if (selected)
+                        ImGui.SetItemDefaultFocus();
+                }
+                ImGui.EndCombo();
             }
 
-            ImGui.TextDisabled("Build the bait list in Vulcan → Vendors, copy its id here.");
+            ImGui.TextDisabled("Build the bait list in Vulcan → Vendors, then pick it here.");
             if (!string.IsNullOrEmpty(restock.LastStatus))
                 ImGui.TextUnformatted($"Last: {restock.LastStatus}");
             if (restock.IsRunning)
